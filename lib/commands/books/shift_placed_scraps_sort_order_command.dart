@@ -1,18 +1,19 @@
 import 'package:flutter_folio/commands/commands.dart';
 import 'package:flutter_folio/data/book_data.dart';
+import 'package:flutter_folio/styled_widgets/toaster.dart';
 
 class ShiftPlacedScrapsSortOrderCommand extends BaseAppCommand {
   Future<void> run(int indexesToShift, PlacedScrapItem scrapItem) async {
     // Fetch the book and try to get the current sortIndex of this page
-    ScrapPageData page = booksModel.currentPage;
-    if (page == null) return -1;
+    ScrapPageData? page = booksModel.currentPage;
+    if (page == null) return;
 
     page = page.copyWith(
       boxOrder: _move(page.boxOrder, scrapItem.documentId, indexesToShift),
     );
-    showToast(indexesToShift < 0 ? "Sent back" : "Moved forward");
+    Toaster.showToast(mainContext, indexesToShift < 0 ? "Sent back" : "Moved forward");
     booksModel.replacePage(page);
-    booksModel.currentPageScraps = List.from(booksModel.currentPageScraps);
+    booksModel.currentPageScraps = List.from(booksModel.currentPageScraps ?? []);
     // Update firebase
     firebase.setPage(page);
   }

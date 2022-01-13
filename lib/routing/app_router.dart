@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_folio/_spikes/auth_spike.dart';
 import 'package:flutter_folio/commands/books/set_current_book_command.dart';
 import 'package:flutter_folio/commands/books/set_current_page_command.dart';
 import 'package:flutter_folio/core_packages.dart';
@@ -11,8 +10,8 @@ import 'package:flutter_folio/models/books_model.dart';
 import 'package:flutter_folio/routing/app_link.dart';
 import 'package:flutter_folio/services/firebase/firebase_service.dart';
 import 'package:flutter_folio/views/auth_page/auth_page.dart';
-import 'package:flutter_folio/views/books_home/books_home_page.dart';
-import 'package:flutter_folio/views/scrapboard_editor_page/scrapboard_editor_page.dart';
+import 'package:flutter_folio/views/editor_page/editor_page.dart';
+import 'package:flutter_folio/views/home_page/home_page.dart';
 import 'package:flutter_folio/views/splash_page.dart';
 
 class AppRouterDelegate extends RouterDelegate<AppLink> with ChangeNotifier {
@@ -42,45 +41,44 @@ class AppRouterDelegate extends RouterDelegate<AppLink> with ChangeNotifier {
     ..pageId = booksModel.currentPageId;
 
   // Return a navigator, configured to match the current app state
+  @override
   Widget build(BuildContext context) {
-    safePrint("RouterDelegate.build()");
-    // Bind to the app state we care about
     bool hasBootstrapped = appModel.hasBootstrapped;
     bool hasSetInitialRoute = appModel.hasSetInitialRoute;
     bool isGuestUser = appModel.isGuestUser;
     bool isAuthenticated = appModel.isAuthenticated;
-    String currentBookId = booksModel.currentBook?.documentId;
+    String? currentBookId = booksModel.currentBook?.documentId;
     // Hold splash in place until our bootstrap cmd and any route parsing is done.
     bool showSplash = hasBootstrapped == false || hasSetInitialRoute == false;
     // See if we want to show a dev spike instead of the main app
-    Widget devSpike = _getDevSpike();
+    Widget? devSpike = _getDevSpike();
     // Wrap
     return MainAppScaffold(
       showAppBar: showSplash == false,
-      child: Navigator(
+      pageNavigator: Navigator(
         onPopPage: _handleNavigatorPop,
         pages: [
           // Dev spike takes precedence
           if (devSpike != null) ...[
             devSpike,
           ] else if (showSplash) ...[
-            SplashPage(),
+            const SplashPage(),
           ]
           // Guest users can only see the EditView in read-only mode
-          else if (isGuestUser) ...[
-            BookEditorPage(bookId: currentBookId, readOnly: true),
+          else if (isGuestUser && currentBookId != null) ...[
+            EditorPage(bookId: currentBookId, readOnly: true),
           ]
           // Regular users
           else ...[
             // Not logged in, show auth
             if (isAuthenticated == false) ...[
-              AuthPage(),
+              const AuthPage(),
             ]
             // Logged in, show HomePage + EditPage
             else ...[
-              BooksHomePage(),
+              const BooksHomePage(),
               if (currentBookId != null) ...[
-                BookEditorPage(bookId: currentBookId),
+                EditorPage(bookId: currentBookId),
               ]
             ],
           ]
@@ -105,51 +103,54 @@ class AppRouterDelegate extends RouterDelegate<AppLink> with ChangeNotifier {
   // Call once at startup of the Router, on all platforms.
   // This might hold a deeplink from the browser, or just an empty initial route "/'
   // Sample deeplink: http://localhost:8080/#/?bk=-ePtxV2wZ&pg=QZdZ1ZCIb&uid=shawn@test.com&
-  Future<void> setInitialRoutePath(AppLink initialLink) async {
+  @override
+  Future<void> setInitialRoutePath(AppLink configuration) async {
     if (kReleaseMode == false) {
       // Skip to some initial payload to test deeplinking
       //initialLink = AppLink(user: "shawn@test.com", bookId: "-ePtxV2wZ", pageId: "QZdZ1ZCIb");
     }
-    await setNewRoutePath(initialLink);
+    log("setInitialRoutePath start");
+    await setNewRoutePath(configuration);
     appModel.hasSetInitialRoute = true;
-    if (kDebugMode) safePrint("setInitialRoutePath complete");
+    log("setInitialRoutePath complete");
   }
 
   @override
   // The OS is asking us to change our location.
   // If we choose, we can update the app state to match the request from the OS.
-  Future<void> setNewRoutePath(AppLink newLink) async {
-    safePrint("setNewRoutePath: ${newLink.toLocation()}");
+  Future<void> setNewRoutePath(AppLink configuration) async {
+    //safePrint("setNewRoutePath: ${newLink.toLocation()}");
 
     // If we've been passed a .user that is not us, then logout, we'll enter guest mode for another user...
-    if (newLink.user != null && newLink.user != appModel.currentUserEmail) {
+    if (configuration.user != null && configuration.user != appModel.currentUserEmail) {
       appModel.currentUser = null; // Logout current user
     }
 
     // If we're not authenticated, see if there's a userId in the link we can use..
     if (appModel.isAuthenticated == false) {
       // If we have no userId, we can't verify any links, so just bail now.
-      if (newLink.user == null) return;
+      if (configuration.user == null) return;
       // Use the userId from the deep-link to grant us read-only access to this users docs
-      firebase.userId = newLink.user;
+      firebase.userId = configuration.user;
     }
 
     // Validate the ids that were passed in. At this point we're using either our existing authenticated user,
     // Or the guest user provided by the app link. In either case, we need to call firebase and validate the ids.
-    ScrapBookData book;
-    ScrapPageData page;
-    if (newLink.bookId != null) {
+    String? bookId = configuration.bookId;
+    String? pageId = configuration.pageId;
+    ScrapBookData? book;
+    ScrapPageData? page;
+    if (bookId != null) {
       // Check if the bookId can be found
-      book = await firebase.getBook(bookId: newLink.bookId);
+      book = await firebase.getBook(bookId: configuration.bookId!);
+      // We found a book for this id, it's a valid link
       if (book != null) {
         // If the link has a pageId use that
-        if (newLink.pageId != null) {
-          // Check if the pageId can be found
-          page = await firebase.getPage(bookId: newLink.bookId, pageId: newLink.pageId);
+        if (pageId == null && book.pageOrder.isNotEmpty) {
+          pageId = book.pageOrder.first;
         }
-        // Otherwise, load the first page in the book using the pageOrder value
-        else if (book.pageOrder?.isNotEmpty ?? false) {
-          page = await firebase.getPage(bookId: book.documentId, pageId: book.pageOrder.first);
+        if (pageId != null) {
+          page = await firebase.getPage(bookId: bookId, pageId: pageId);
         }
       }
     }
@@ -162,7 +163,7 @@ class AppRouterDelegate extends RouterDelegate<AppLink> with ChangeNotifier {
   // Go back one level in our state if possible
   bool tryGoBack() {
     if (booksModel.currentBook != null) {
-      booksModel.currentBook = null;
+      SetCurrentBookCommand().run(null);
       return true; //true means we handled it
     }
     return false; //false lets the whole app go into background
@@ -184,8 +185,9 @@ class AppRouterDelegate extends RouterDelegate<AppLink> with ChangeNotifier {
   // endregion
 }
 
-Widget _getDevSpike() {
+Widget? _getDevSpike() {
   if (kReleaseMode) return null;
+  //return FirebaseRealtimeDbSpike();
   //return NativeFirebaseAuthSpike();
   //return ModelCommandsSpike();
   //return RestApiSpikes();

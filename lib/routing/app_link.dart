@@ -8,35 +8,34 @@ class AppLink {
   static const String kBookParam = "bk";
   static const String kPageParam = "pg";
   static const String kUserParam = "u";
-  static Codec<String, String> _stringToBase64 = utf8.fuse(base64);
+  static final Codec<String, String> _stringToBase64 = utf8.fuse(base64);
 
   AppLink({this.pageId, this.bookId, this.user});
-  String pageId;
-  String bookId;
-  String user;
+  String? pageId;
+  String? bookId;
+  String? user;
 
-  static String encode(String s) {
+  static String? encode(String? s) {
     if (s == null) return null;
     return _stringToBase64.encode(s);
     //return s;
   }
 
-  static String decode(String s) {
+  static String? decode(String? s) {
     if (s == null) return null;
     return _stringToBase64.decode(s);
     //return s;
   }
 
-  static AppLink fromLocation(String location) {
-    location = Uri.decodeFull(location);
-    // Shared function to inject keys if they are not null
+  static AppLink fromLocation(String? location) {
+    location = Uri.decodeFull(location ?? "");
     Map<String, String> params = Uri.parse(location).queryParameters;
+    // Shared function to inject keys if they are not null
     void trySet(String key, void Function(String) setter) {
-      if (params.containsKey(key)) setter?.call(params[key]);
+      if (params.containsKey(key)) setter.call(params[key]!);
     }
 
-    safePrint("parse-fromLocation: $location");
-
+    log("parse-fromLocation: $location");
     // Create the applink, inject any params we've found
     AppLink link = AppLink();
     trySet(AppLink.kBookParam, (s) => link.bookId = s);
@@ -46,7 +45,7 @@ class AppLink {
   }
 
   String toLocation() {
-    String addKeyValPair({String key, String value}) => value == null ? "" : "${key}=$value&";
+    String addKeyValPair({required String key, String? value}) => value == null ? "" : "$key=$value&";
     String loc = "/?";
     loc += addKeyValPair(key: kBookParam, value: bookId);
     loc += addKeyValPair(key: kPageParam, value: pageId);

@@ -1,3 +1,4 @@
+import 'package:context_menus/context_menus.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -6,7 +7,6 @@ import 'package:flutter_folio/_utils/device_info.dart';
 import 'package:flutter_folio/_utils/keyboard_utils.dart';
 import 'package:flutter_folio/_utils/notifications/close_notification.dart';
 import 'package:flutter_folio/_utils/string_utils.dart';
-import 'package:flutter_folio/_widgets/context_menu_overlay.dart';
 import 'package:flutter_folio/_widgets/gradient_container.dart';
 import 'package:flutter_folio/_widgets/mixins/raw_keyboard_listener_mixin.dart';
 import 'package:flutter_folio/_widgets/positioned_all.dart';
@@ -26,20 +26,18 @@ part 'scrap_pile_picker_view.dart';
 /// [ScrapPilePickerState] acts as a controller for [ScrapPilePickerView]
 class ScrapPilePicker extends StatefulWidget {
   const ScrapPilePicker({
-    Key key,
-    @required this.bookId,
-    this.contextMenuLabels,
-    this.contextMenuActions,
+    Key? key,
+    required this.bookId,
+    this.contextMenuButtons,
     this.onSelectionChanged,
     this.onDeletePressed,
     this.mobileMode = false,
   }) : super(key: key);
 
   final String bookId;
-  final List<String> Function(ScrapItem item) contextMenuLabels;
-  final List<VoidCallback> Function(ScrapItem item) contextMenuActions;
-  final void Function(List<ScrapItem> items) onSelectionChanged;
-  final VoidCallback onDeletePressed;
+  final List<ContextMenuButtonConfig> Function(ScrapItem item)? contextMenuButtons;
+  final void Function(List<ScrapItem> items)? onSelectionChanged;
+  final VoidCallback? onDeletePressed;
   final bool mobileMode;
 
   @override
@@ -47,8 +45,8 @@ class ScrapPilePicker extends StatefulWidget {
 }
 
 class ScrapPilePickerState extends State<ScrapPilePicker> with RawKeyboardListenerMixin {
-  ScrollController _scrollController = ScrollController();
-  List<ScrapItem> _bookScraps = [];
+  final ScrollController _scrollController = ScrollController();
+  List<ScrapItem>? _bookScraps = [];
   List<String> _selectedIds = [];
 
   bool _isVisible = false;
@@ -76,28 +74,31 @@ class ScrapPilePickerState extends State<ScrapPilePicker> with RawKeyboardListen
 
   @override
   void handleKeyDown(RawKeyDownEvent value) {
-    if (KeyboardUtils.isCommandOrControlDown && value.logicalKey == LogicalKeyboardKey.keyA) {
+    if (KeyboardUtils.isMultiSelectModifierDown && value.logicalKey == LogicalKeyboardKey.keyA) {
       _handleSelectAllPressed();
     }
   }
 
   void _handlePickImagesPressed([bool enableCamera = true]) async {
-    List<String> paths = await PickImagesCommand().run(allowMultiple: true, enableCamera: enableCamera);
-    UploadImageScrapsCommand().run(widget.bookId, paths);
+    List<PickedImage> images = await PickImagesCommand().run(allowMultiple: true, enableCamera: enableCamera);
+    UploadImageScrapsCommand().run(widget.bookId, images);
   }
 
   void _handleBgTapped() => clearSelection();
 
   void _handleScrapPressed(int index) {
+    final scraps = _bookScraps;
+    if (scraps == null) return;
     // Mobile mode does not allow deletion, or insertion of images. So no need to select them.
     if (widget.mobileMode) return;
+    // Touch mode will handle multi-select differently
     bool touchMode = context.read<AppModel>().enableTouchMode;
-    String id = _bookScraps[index].documentId;
+    String id = scraps[index].documentId;
     // Use a utility method to handle the click, and return us a new set of ids
     _selectedIds = KeyboardUtils.handleMultiSelectListClick(
-      id,
-      _selectedIds,
-      _bookScraps.map((e) => e.documentId).toList(),
+      clicked: id,
+      selected: _selectedIds,
+      all: scraps.map((e) => e.documentId).toList(),
       touchMode: touchMode,
       allowSpanSelect: true,
     );
@@ -107,11 +108,15 @@ class ScrapPilePickerState extends State<ScrapPilePicker> with RawKeyboardListen
 
   /// Toggle between select-all or select-none
   void _handleSelectAllPressed() {
+    if (_bookScraps == null) return;
     // Check whether we're selecting, or de-selecting all
-    bool doSelectAll = _selectedIds.length != _bookScraps.length;
+    bool doSelectAll = _selectedIds.length != _bookScraps!.length;
     _selectedIds.clear();
-    if (doSelectAll) {
-      _bookScraps.forEach((s) => _selectedIds.add(s.documentId));
+    final bookScraps = _bookScraps;
+    if (doSelectAll && bookScraps != null) {
+      for (final s in bookScraps) {
+        _selectedIds.add(s.documentId);
+      }
     }
     setState(() {});
     _notifySelectionChangeHandler();
@@ -120,9 +125,12 @@ class ScrapPilePickerState extends State<ScrapPilePicker> with RawKeyboardListen
   // Converts selected scraps to a list of ids, and notifies any listeners.
   void _notifySelectionChangeHandler() {
     List<ScrapItem> selectedScraps = [];
-    _bookScraps.forEach((s) {
-      if (_selectedIds.contains(s.documentId)) selectedScraps.add(s);
-    });
+    final bookScraps = _bookScraps;
+    if (bookScraps != null) {
+      for (final s in bookScraps) {
+        if (_selectedIds.contains(s.documentId)) selectedScraps.add(s);
+      }
+    }
     widget.onSelectionChanged?.call(selectedScraps);
   }
 

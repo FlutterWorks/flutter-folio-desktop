@@ -1,28 +1,26 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_folio/_utils/debouncer.dart';
+import 'package:flutter_folio/_utils/device_info.dart';
 import 'package:flutter_folio/_utils/easy_notifier.dart';
-import 'package:flutter_folio/_utils/safe_print.dart';
 import 'package:flutter_folio/_utils/universal_file/universal_file.dart';
 import 'package:flutter_folio/data/app_user.dart';
 import 'package:flutter_folio/models/books_model.dart';
 import 'package:flutter_folio/services/firebase/firebase_service.dart';
 import 'package:flutter_folio/themes.dart';
-import 'package:universal_platform/universal_platform.dart';
+
+import '../_utils/timed/debouncer.dart';
 
 abstract class AbstractModel extends EasyNotifier {}
 
 // * Make sure file is cleared when we logout (ChangeUserCommand)
 class AppModel extends AbstractModel {
   static const kFileName = "app-model";
-  static const kVersion = "1.0.0-RC6";
+  static const kVersion = "1.2.3";
 
-  // Enable "isGuestUser" if we have no current user, but firebase has been assigned a userId, and we have a current book.
-  // This should cause the app to show a single scrap-board view, with read-only functionality.
-  bool get isGuestUser => hasUser == false && _firebase.userId != null && _booksModel.currentBook != null;
+  // Determines what the start value should be for touchMode, bases on the current device os
+  static bool defaultToTouchMode() => DeviceOS.isMobile;
 
-  static bool get _defaultTouchMode => UniversalPlatform.isIOS || UniversalPlatform.isAndroid;
   static AppTheme get _defaultTheme => AppTheme.fromType(ThemeType.Orange_Light);
 
   AppModel(this._booksModel, this._firebase) {
@@ -30,12 +28,12 @@ class AppModel extends AbstractModel {
   }
 
   // State
-  Debouncer _saveDebouncer = Debouncer(Duration(seconds: 1));
-  BooksModel _booksModel;
-  FirebaseService _firebase;
+  final Debouncer _saveDebouncer = Debouncer(const Duration(seconds: 1));
+  final BooksModel _booksModel;
+  final FirebaseService _firebase;
 
   /// Touch Mode (show btns instead of using right-click, use larger paddings)
-  bool _enableTouchMode = _defaultTouchMode;
+  bool _enableTouchMode = defaultToTouchMode();
   bool get enableTouchMode => _enableTouchMode;
   set enableTouchMode(bool value) {
     if (value == _enableTouchMode) return;
@@ -46,7 +44,7 @@ class AppModel extends AbstractModel {
   void reset() {
     _currentUser = null;
     _theme = _defaultTheme;
-    enableTouchMode = _defaultTouchMode;
+    enableTouchMode = defaultToTouchMode();
   }
 
   /// Startup
@@ -60,15 +58,19 @@ class AppModel extends AbstractModel {
 
   /// Auth
   // Current User
-  AppUser _currentUser;
-  AppUser get currentUser => _currentUser;
-  set currentUser(AppUser currentUser) => notify(() => _currentUser = currentUser);
+  AppUser? _currentUser;
+  AppUser? get currentUser => _currentUser;
+  set currentUser(AppUser? currentUser) => notify(() => _currentUser = currentUser);
 
   bool get isFirebaseSignedIn => _firebase.isSignedIn;
 
   bool get hasUser => currentUser != null;
   bool get isAuthenticated => hasUser && isFirebaseSignedIn;
-  String get currentUserEmail => currentUser?.email;
+  String? get currentUserEmail => currentUser?.email;
+
+  // Enable "isGuestUser" if we have no current user, but firebase has been assigned a userId, and we have a current book.
+  // This should cause the app to show a single scrap-board view, with read-only functionality.
+  bool get isGuestUser => hasUser == false && _firebase.userId != null && _booksModel.currentBook != null;
 
   /// Settings
   // Current Theme
@@ -82,20 +84,7 @@ class AppModel extends AbstractModel {
   set textDirection(TextDirection value) => notify(() => _textDirection = value);
 
   // Window Position
-  Rect _windowRect = Rect.zero;
-  Rect get windowRect => _windowRect;
-  set windowRect(Rect value) {
-    safePrint("Set windowRect $value");
-    notify(() => _windowRect = value);
-  }
-
-  bool get hasValidWindowRect {
-    return !windowRect.isEmpty &&
-        windowRect.size.width > 0 &&
-        windowRect.size.height > 0 &&
-        windowRect.left > 0 &&
-        windowRect.right > 0;
-  }
+  Size windowSize = Size.zero;
 
   /// Public Api
 
@@ -107,24 +96,26 @@ class AppModel extends AbstractModel {
     return false;
   }
 
-  bool get canPopNav => _booksModel.currentBook != null;
+  void scheduleSave() => _saveDebouncer.run(save);
 
-  void scheduleSave() => _saveDebouncer.call(save);
-
-  void save() {
+  Future<void> save() async {
     print("Saving: $kFileName");
     String saveJson = jsonEncode(toJson());
-    UniversalFile(kFileName).write(saveJson);
+    await UniversalFile(kFileName).write(saveJson);
   }
 
-  void load() async {
-    String saveJson = await UniversalFile(AppModel.kFileName).read();
-    try {
-      fromJson(jsonDecode(saveJson) as Map<String, dynamic>);
-    } catch (e) {
-      print("Failed to decode save file json: $e");
+  Future<void> load() async {
+    String? saveJson = await UniversalFile(AppModel.kFileName).read();
+    if (saveJson != null) {
+      try {
+        fromJson(jsonDecode(saveJson) as Map<String, dynamic>);
+        print("Save file loaded, $windowSize");
+      } catch (e) {
+        print("Failed to decode save file json: $e");
+      }
+    } else {
+      print("No save file found.");
     }
-    print("File loaded, $windowRect");
   }
 
   void fromJson(Map<String, dynamic> json) {
@@ -132,11 +123,9 @@ class AppModel extends AbstractModel {
     if (json["enableTouchMode"] != null) {
       _enableTouchMode = json["enableTouchMode"] as bool;
     }
-    _windowRect = Rect.fromLTWH(
-      json["winX"] as double ?? 0.0,
-      json["winY"] as double ?? 0.0,
-      json["winWidth"] as double ?? 0.0,
-      json["winHeight"] as double ?? 0.0,
+    windowSize = Size(
+      json["winWidth"] as double? ?? 0.0,
+      json["winHeight"] as double? ?? 0.0,
     );
     //print(json);
   }
@@ -144,10 +133,8 @@ class AppModel extends AbstractModel {
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       "currentUser": _currentUser?.toJson(),
-      "winX": _windowRect.left,
-      "winY": _windowRect.top,
-      "winWidth": _windowRect.width,
-      "winHeight": _windowRect.height,
+      "winWidth": windowSize.width,
+      "winHeight": windowSize.height,
       "enableTouchMode": enableTouchMode,
     };
   }

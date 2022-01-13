@@ -1,16 +1,16 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_folio/_widgets/decorated_container.dart';
 import 'package:flutter_folio/core_packages.dart';
 
 class StyledTooltip extends StatelessWidget {
-  const StyledTooltip(this.label, {Key key, this.arrowAlignment = Alignment.topCenter}) : super(key: key);
+  const StyledTooltip(this.label, {Key? key, this.arrowAlignment = Alignment.topCenter}) : super(key: key);
   final String label;
   final Alignment arrowAlignment;
 
   @override
   Widget build(BuildContext context) {
-    if (label == null) return Container();
     AppTheme theme = context.watch();
     bool isOnSide = arrowAlignment.y == 0;
     // when aligned along the top of bottom, we want the arrow to have a bit of padding.
@@ -23,13 +23,14 @@ class StyledTooltip extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: hzPadding),
               child: Align(
-                alignment: arrowAlignment ?? Alignment.topCenter,
+                alignment: arrowAlignment,
                 child: _Arrow(theme.greyStrong),
               ),
             ),
           ),
-          Container(
-            decoration: BoxDecoration(color: theme.greyStrong, borderRadius: Corners.smBorder),
+          DecoratedContainer(
+            color: theme.greyStrong,
+            borderRadius: Corners.sm,
             padding: EdgeInsets.all(Insets.sm),
             child: Text(label, style: TextStyles.caption.copyWith(color: Colors.white)),
           ),
@@ -40,7 +41,7 @@ class StyledTooltip extends StatelessWidget {
 }
 
 class _Arrow extends StatelessWidget {
-  const _Arrow(this.color, {Key key}) : super(key: key);
+  const _Arrow(this.color, {Key? key}) : super(key: key);
   final Color color;
 
   @override

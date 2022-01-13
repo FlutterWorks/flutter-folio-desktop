@@ -11,47 +11,63 @@ enum ThemeType {
 class AppTheme {
   static ThemeType defaultTheme = ThemeType.Orange_Light;
 
-  ThemeType type;
-  bool isDark;
-  Color bg1;
-  Color surface1;
-  Color accent1;
-  Color greyWeak;
-  Color grey;
-  Color greyMedium;
-  Color greyStrong;
-  Color focus;
+  final ThemeType type;
+  final bool isDark;
+  final Color bg1;
+  final Color surface1;
+  final Color surface2;
+  final Color accent1;
+  final Color greyWeak;
+  final Color grey;
+  final Color greyMedium;
+  final Color greyStrong;
+  final Color focus;
 
   /// Darkness adjusted text color. Will be Black in light mode, and White in dark
-  Color mainTextColor;
-  Color inverseTextColor;
+  late Color mainTextColor;
+  late Color inverseTextColor;
 
   /// Default constructor
-  AppTheme({@required this.isDark}) {
+  AppTheme(
+      {required this.type,
+      required this.bg1,
+      required this.surface1,
+      required this.surface2,
+      required this.accent1,
+      required this.greyWeak,
+      required this.grey,
+      required this.greyMedium,
+      required this.greyStrong,
+      required this.focus,
+      required this.isDark}) {
     mainTextColor = isDark ? Colors.white : Colors.black;
-    inverseTextColor = inverseTextColor ?? (isDark ? Colors.black : Colors.white);
+    inverseTextColor = isDark ? Colors.black : Colors.white;
   }
 
   /// Creates an AppTheme from a provided Type.
   factory AppTheme.fromType(ThemeType t) {
     switch (t) {
       case ThemeType.Orange_Light:
-        return AppTheme(isDark: false)
-          ..type = t
-          ..bg1 = const Color(0xfff3f3f3)
-          ..surface1 = Colors.white
-          ..accent1 = const Color(0xffff392b)
-          ..greyWeak = const Color(0xffcccccc)
-          ..grey = const Color(0xff999999)
-          ..greyMedium = const Color(0xff747474)
-          ..greyStrong = const Color(0xff333333)
-          ..focus = const Color(0xffd81e1e);
+        return AppTheme(
+          isDark: false,
+          type: t,
+          bg1: const Color(0xfff3f3f3),
+          surface1: Colors.white,
+          surface2: const Color(0xffebf0f3),
+          accent1: const Color(0xffff392b),
+          greyWeak: const Color(0xffcccccc),
+          grey: const Color(0xff999999),
+          greyMedium: const Color(0xff747474),
+          greyStrong: const Color(0xff333333),
+          focus: const Color(0xffd81e1e),
+        );
+      default:
+        return AppTheme.fromType(defaultTheme);
     }
-    return AppTheme.fromType(defaultTheme);
   }
 
   // Converts AppTheme into a Material Theme Data, using whatever mappings we like
-  ThemeData get themeData {
+  ThemeData toThemeData() {
     var t = ThemeData.from(
       // Use the .dark() and .light() constructors to handle the text themes
       textTheme: (isDark ? ThemeData.dark() : ThemeData.light()).textTheme,
@@ -73,7 +89,6 @@ class AppTheme {
     );
     // Apply additional styling that is missed by ColorScheme
     t.copyWith(
-        visualDensity: VisualDensity.compact,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         textSelectionTheme: TextSelectionThemeData(
           cursorColor: surface1,

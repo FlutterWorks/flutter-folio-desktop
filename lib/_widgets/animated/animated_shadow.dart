@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 
 class AnimatedShadow extends StatelessWidget {
   AnimatedShadow({
-    Key key,
-    @required this.child,
-    @required this.duration,
-    @required this.blurs,
-    @required this.colors,
+    Key? key,
+    required this.child,
+    required this.duration,
+    required this.blurs,
+    required this.colors,
     this.begin,
-    @required this.end,
+    required this.end,
     this.curve,
   }) : super(key: key) {
     assert(blurs.length == colors.length, "blurs.length and colors.length must match");
@@ -18,17 +18,17 @@ class AnimatedShadow extends StatelessWidget {
 
   final Widget child;
   final Duration duration;
-  final double begin;
+  final double? begin;
   final double end;
   final List<double> blurs;
   final List<Color> colors;
-  final Curve curve;
+  final Curve? curve;
 
   @override
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: begin ?? end, end: end),
-      curve: curve,
+      curve: curve ?? Curves.easeOut,
       builder: (_, double value, _child) {
         return Container(
           decoration: BoxDecoration(boxShadow: [
@@ -45,7 +45,7 @@ class AnimatedShadow extends StatelessWidget {
         );
       },
       child: child,
-      duration: duration ?? Duration(milliseconds: 350),
+      duration: duration,
     );
   }
 }

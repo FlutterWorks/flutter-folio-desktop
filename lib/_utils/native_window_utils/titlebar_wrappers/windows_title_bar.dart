@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 /// Native TitleBar for Windows, uses BitDojo platform
 class WindowsTitleBar extends StatelessWidget {
-  const WindowsTitleBar(this.child, {Key key}) : super(key: key);
+  const WindowsTitleBar(this.child, {Key? key}) : super(key: key);
   final Widget child;
 
   @override
@@ -22,7 +22,7 @@ class WindowsTitleBar extends StatelessWidget {
           MoveWindow(),
           child,
           Align(
-            alignment: Alignment.centerRight,
+            alignment: Alignment.topRight,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [

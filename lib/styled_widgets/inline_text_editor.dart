@@ -1,39 +1,41 @@
+import 'package:context_menus/context_menus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_folio/_utils/string_utils.dart';
-import 'package:flutter_folio/_widgets/context_menu_overlay.dart';
 import 'package:flutter_folio/core_packages.dart';
 
 //TODO: This is a good package / code example / blogpost
 class InlineTextEditor extends StatefulWidget {
   const InlineTextEditor(this.text,
-      {Key key,
-      @required this.width,
-      this.style,
+      {Key? key,
+      required this.width,
+      required this.style,
       this.maxLines = 1,
       this.alignVertical = TextAlignVertical.center,
       this.align = TextAlign.left,
       this.onChanged,
       this.promptText,
-      this.onFocusOut,
       this.onFocusIn,
+      this.onFocusOut,
       this.controller,
       this.enableContextMenu = true,
-      this.autoFocus = false})
+      this.autoFocus = false,
+      this.maxLength})
       : super(key: key);
   final double width;
   final String text;
-  final TextStyle style;
   final int maxLines;
+  final int? maxLength;
   final bool autoFocus;
   final TextAlignVertical alignVertical;
   final TextAlign align;
-  final void Function(String value) onChanged;
-  final void Function() onFocusIn;
-  final void Function(String value) onFocusOut;
-  final String promptText;
+  final TextStyle style;
+  final void Function(String value)? onChanged;
+  final String? promptText;
+  final void Function()? onFocusIn;
+  final void Function(String value)? onFocusOut;
+  final TextEditingController? controller;
   final bool enableContextMenu;
-  final TextEditingController controller;
 
   @override
   _InlineTextEditorState createState() => _InlineTextEditorState();
@@ -41,8 +43,8 @@ class InlineTextEditor extends StatefulWidget {
 
 class _InlineTextEditorState extends State<InlineTextEditor> {
   bool _isEditing = false;
-  TextEditingController _textController;
-  FocusNode _textFocus = FocusNode();
+  late TextEditingController _textController;
+  final FocusNode _textFocus = FocusNode();
 
   @override
   void initState() {
@@ -60,13 +62,17 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
 
   @override
   void dispose() {
-    _textController.dispose();
+    // Only dispose our internal controller
+    if (_textController != widget.controller) {
+      _textController.dispose();
+    }
     _textFocus.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    AppTheme theme = context.watch();
     // Measure Size of text using a maxWidth and maxLines so we can reserve a space of that size
     String textToMeasure = _textController.text;
     Size textSize = StringUtils.measure(textToMeasure, widget.style, maxLines: widget.maxLines, maxWidth: widget.width);
@@ -85,7 +91,12 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
             // Show a right-click menu to copy the text just because we can :D
             ContextMenuRegion(
               isEnabled: widget.enableContextMenu,
-              contextMenu: GenericContextMenu(labels: ["Edit...", "Copy"], actions: [_handleTextPressed, _handleCopy]),
+              contextMenu: GenericContextMenu(
+                buttonConfigs: [
+                  ContextMenuButtonConfig("Edit...", onPressed: _handleTextPressed),
+                  ContextMenuButtonConfig("Copy", onPressed: _handleCopy),
+                ],
+              ),
               // Wrap the text in a button, so we can switch to editing mode when they click.
               child: SimpleBtn(
                 onPressed: _handleTextPressed,
@@ -110,18 +121,23 @@ class _InlineTextEditorState extends State<InlineTextEditor> {
               isEnabled: widget.enableContextMenu,
               contextMenu: TextContextMenu(data: _textController.text, controller: _textController),
               child: Container(
-                color: Colors.red.withOpacity(.1),
+                color: theme.accent1.withOpacity(.1),
                 child: TextFormField(
-                    scrollPhysics: NeverScrollableScrollPhysics(),
+                    inputFormatters: [
+                      LengthLimitingTextInputFormatter(widget.maxLength),
+                    ],
+                    scrollPhysics: const NeverScrollableScrollPhysics(),
                     onChanged: widget.onChanged,
                     style: widget.style,
                     textAlign: widget.align,
                     textAlignVertical: widget.alignVertical,
                     focusNode: _textFocus,
+                    cursorColor: theme.grey,
                     controller: _textController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       contentPadding: EdgeInsets.only(top: 10, bottom: 0),
                       border: InputBorder.none,
+                      counterText: "",
                       isDense: true,
                     ),
                     minLines: widget.maxLines,

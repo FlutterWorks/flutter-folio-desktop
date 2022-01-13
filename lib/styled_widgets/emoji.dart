@@ -30,14 +30,15 @@ enum Emojis {
 }
 
 class Emoji extends StatelessWidget {
-  final Emojis emoji;
-  final double size;
-  final Color color;
+  final Emojis? emoji;
+  final double? size;
 
-  const Emoji(this.emoji, {Key key, this.size, this.color}) : super(key: key);
-  Widget build(BuildContext c) {
-    String fileName = describeEnum(emoji).toLowerCase().replaceAll("_", "-");
-    String path = 'images/emoji/' + fileName + '.svg';
-    return SvgPicture.asset(path, width: size, height: size, color: color);
+  const Emoji(this.emoji, {Key? key, this.size}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    if (emoji == null) return Container();
+    String fileName = describeEnum(emoji!).toLowerCase().replaceAll("_", "-");
+    String path = 'assets/images/emoji/' + fileName + '.svg';
+    return SvgPicture.asset(path, width: size, height: size);
   }
 }

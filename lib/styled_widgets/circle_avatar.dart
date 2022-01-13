@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_folio/_widgets/app_image.dart';
+import 'package:flutter_folio/_widgets/decorated_container.dart';
 import 'package:flutter_folio/core_packages.dart';
 
 class StyledCircleImage extends StatelessWidget {
-  const StyledCircleImage({Key key, @required this.url, this.borderSize, this.padding}) : super(key: key);
+  const StyledCircleImage({Key? key, required this.url, this.padding}) : super(key: key);
 
-  final double borderSize;
-  final EdgeInsets padding;
+  final EdgeInsets? padding;
   final String url;
 
   @override
@@ -16,15 +16,12 @@ class StyledCircleImage extends StatelessWidget {
       padding: padding ?? EdgeInsets.zero,
       child: AspectRatio(
         aspectRatio: 1,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(99),
-            border: Border.all(color: theme.greyWeak, width: 2),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(99),
-            child: HostedImage(url, fit: BoxFit.cover),
-          ),
+        child: DecoratedContainer(
+          clipChild: true,
+          borderColor: theme.greyWeak,
+          borderWidth: 2,
+          borderRadius: 99,
+          child: HostedImage(url, fit: BoxFit.cover),
         ),
       ),
     );

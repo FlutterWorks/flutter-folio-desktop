@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 
 /// Native TitleBar for Linux, uses BitDojo platform
 class LinuxTitleBar extends StatelessWidget {
-  const LinuxTitleBar(this.child, {Key key}) : super(key: key);
+  const LinuxTitleBar(this.child, {Key? key}) : super(key: key);
   final Widget child;
 
   @override

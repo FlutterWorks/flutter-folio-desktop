@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
+// TODO: Make this a package
 Widget _build(Alignment value, Widget child) => Align(alignment: value, child: child);
 
 /// TOPS
 class TopLeft extends StatelessWidget {
-  const TopLeft({Key key, this.child}) : super(key: key);
+  const TopLeft({Key? key, required this.child}) : super(key: key);
   final Widget child;
 
   @override
@@ -12,7 +13,7 @@ class TopLeft extends StatelessWidget {
 }
 
 class TopRight extends StatelessWidget {
-  const TopRight({Key key, this.child}) : super(key: key);
+  const TopRight({Key? key, required this.child}) : super(key: key);
   final Widget child;
 
   @override
@@ -20,7 +21,7 @@ class TopRight extends StatelessWidget {
 }
 
 class TopCenter extends StatelessWidget {
-  const TopCenter({Key key, this.child}) : super(key: key);
+  const TopCenter({Key? key, required this.child}) : super(key: key);
   final Widget child;
 
   @override
@@ -29,7 +30,7 @@ class TopCenter extends StatelessWidget {
 
 /// CENTERS
 class CenterLeft extends StatelessWidget {
-  const CenterLeft({Key key, this.child}) : super(key: key);
+  const CenterLeft({Key? key, required this.child}) : super(key: key);
   final Widget child;
 
   @override
@@ -37,7 +38,7 @@ class CenterLeft extends StatelessWidget {
 }
 
 class CenterRight extends StatelessWidget {
-  const CenterRight({Key key, this.child}) : super(key: key);
+  const CenterRight({Key? key, required this.child}) : super(key: key);
   final Widget child;
 
   @override
@@ -46,7 +47,7 @@ class CenterRight extends StatelessWidget {
 
 /// BOTTOMS
 class BottomLeft extends StatelessWidget {
-  const BottomLeft({Key key, this.child}) : super(key: key);
+  const BottomLeft({Key? key, required this.child}) : super(key: key);
   final Widget child;
 
   @override
@@ -54,7 +55,7 @@ class BottomLeft extends StatelessWidget {
 }
 
 class BottomRight extends StatelessWidget {
-  const BottomRight({Key key, this.child}) : super(key: key);
+  const BottomRight({Key? key, required this.child}) : super(key: key);
   final Widget child;
 
   @override
@@ -62,7 +63,7 @@ class BottomRight extends StatelessWidget {
 }
 
 class BottomCenter extends StatelessWidget {
-  const BottomCenter({Key key, this.child}) : super(key: key);
+  const BottomCenter({Key? key, required this.child}) : super(key: key);
   final Widget child;
 
   @override

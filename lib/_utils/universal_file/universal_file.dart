@@ -4,11 +4,11 @@
 import 'universal_file_locator.dart' if (dart.library.html) 'web_file.dart' if (dart.library.io) 'io_file.dart';
 
 abstract class UniversalFile {
-  String fileName;
+  late final String fileName;
 
   Future<void> write(String value, [bool append = false]);
 
-  Future<String> read();
+  Future<String?> read();
 
   factory UniversalFile(String fileName) => getPlatformFileWriter(fileName);
 }

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 class FileUtils {
-  Future<String> readAsString(String path) async {
+  Future<String?> readAsString(String path) async {
     try {
       return await File(path).readAsString();
     } catch (e) {
@@ -16,6 +16,6 @@ class FileUtils {
     } catch (e) {
       print("$e");
     }
-    return null;
+    return;
   }
 }
